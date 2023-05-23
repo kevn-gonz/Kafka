@@ -1,0 +1,11 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaTopic
+metadata:
+  name: windows-winlogbeat
+  labels:
+    strimzi.io/cluster: kafka-prod-cluster
+spec:
+  partitions: 8
+  replicas: 3
+  config:
+    retention.ms: 270000000

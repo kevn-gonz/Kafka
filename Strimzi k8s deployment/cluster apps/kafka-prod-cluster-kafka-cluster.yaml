@@ -1,0 +1,91 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: Kafka
+metadata:
+  name: kafka-prod-cluster
+spec:
+  kafka:
+    version: 2.8.0
+    template:
+      pod:
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+          fsGroup: 1001
+    replicas: 3
+    listeners:
+      - name: external
+        port: 9092
+        type: nodeport
+        #type: loadbalancer # https://strimzi.io/blog/2019/05/13/accessing-kafka-part-4/
+        tls: false
+        configuration:
+          bootstrap:
+            nodePort: 32123
+        authentication:
+          type: scram-sha-512
+    authorization:
+      type: simple
+    config:
+      # more info here: https://github.com/strimzi/strimzi-kafka-operator/blob/main/cluster-operator/src/test/resources/current-kafka-broker.conf
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 3
+      log.message.format.version: 2.8
+      inter.broker.protocol.version: 2.8
+      auto.create.topics.enable: false
+      delete.topic.enable: true
+      #log.retention.hours: 75
+
+    #https://strimzi.io/docs/operators/latest/using.html#con-common-configuration-jvm-reference
+    resources:
+      requests:
+        memory: 12Gi
+        cpu: "2"
+      limits:
+        memory: 16Gi
+        cpu: "2"
+    jvmOptions:
+      -Xms: 8192m
+      -Xmx: 8192m
+
+    storage:
+      type: jbod
+      volumes:
+      - id: 0
+        type: persistent-claim
+        class: nfs-ssd # https://strimzi.io/blog/2019/07/08/persistent-storage-improvements/
+        size: 200Gi
+        #deleteClaim: false
+        deleteClaim: true # for development
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-prod-cluster-kafka-metrics
+          key: kafka-metrics-config.yml
+  zookeeper:
+    template:
+      pod:
+        securityContext:
+          runAsUser: 1001
+          runAsGroup: 1001
+          fsGroup: 1001
+    replicas: 3
+    storage:
+      type: persistent-claim
+      size: 2Gi
+      class: nfs-ssd # https://strimzi.io/blog/2019/07/08/persistent-storage-improvements/
+      #deleteClaim: false
+      deleteClaim: true # for development
+    metricsConfig:
+      type: jmxPrometheusExporter
+      valueFrom:
+        configMapKeyRef:
+          name: kafka-prod-cluster-kafka-metrics
+          key: zookeeper-metrics-config.yml
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+  kafkaExporter:
+    topicRegex: ".*"
+    groupRegex: ".*"

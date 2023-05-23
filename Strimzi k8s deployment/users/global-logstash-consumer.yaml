@@ -1,0 +1,24 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaUser
+metadata:
+  labels:
+    strimzi.io/cluster: kafka-prod-cluster
+  name: global-logstash-consumer
+spec:
+  authentication:
+    type: scram-sha-512
+  authorization:
+    type: simple
+    acls:
+      - resource:
+          type: topic
+          name: "*"
+          patternType: literal
+        operation: Read
+        host: "*"
+      - resource:
+          type: group
+          name: "*"
+          patternType: literal
+        operation: Read
+        host: "*"
